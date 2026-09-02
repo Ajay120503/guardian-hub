@@ -1,0 +1,2 @@
+import { ShieldCheck } from "lucide-react";
+export function Logo({ light = false }: { light?: boolean }) { return <div className={`flex items-center gap-3 font-extrabold tracking-tight ${light ? "text-white" : "text-neutral"}`}><span className="grid size-10 place-items-center rounded-2xl bg-primary text-primary-content shadow-lg shadow-primary/20"><ShieldCheck size={22}/></span><span className="text-lg">Guardian<span className="text-primary">Hub</span></span></div>; }

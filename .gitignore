@@ -1,0 +1,23 @@
+# Dependencies (when the dashboard is installed independently)
+node_modules/
+
+# Vite production output and test coverage
+dist/
+coverage/
+
+# Local Vite environment files; keep templates
+.env
+.env.*
+!.env.example
+
+# Files generated when TypeScript compiles the Vite config
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
+
+# Local editor and log files
+.idea/
+.vscode/
+*.log
+.DS_Store
+
