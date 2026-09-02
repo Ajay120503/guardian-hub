@@ -14,6 +14,7 @@ import {
   Image,
   MessageSquareText,
   PackageSearch,
+  Pencil,
   RefreshCw,
   Send,
   Search,
@@ -51,6 +52,9 @@ export function DeviceDetail() {
   const [media, setMedia] = useState<SharedMedia[]>([]);
   const [documents, setDocuments] = useState<SharedDocument[]>([]);
   const [appQuery, setAppQuery] = useState("");
+  const [editingChild, setEditingChild] = useState(false);
+  const [childNameDraft, setChildNameDraft] = useState("");
+  const [savingChild, setSavingChild] = useState(false);
   const [parentMessage, setParentMessage] = useState("");
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
@@ -112,6 +116,29 @@ export function DeviceDetail() {
     setParentMessage("");
     setToast("Family message queued for the child device");
   }
+  function beginChildEdit() {
+    if (!device) return;
+    setChildNameDraft(device.childName);
+    setEditingChild(true);
+  }
+  async function updateChildProfile() {
+    const childName = childNameDraft.trim();
+    if (!device || childName.length < 2) return;
+    setSavingChild(true);
+    setError("");
+    try {
+      const response = await api.patch(`/devices/${deviceId}/profile`, {
+        childName,
+      });
+      setDevice(response.data.device);
+      setEditingChild(false);
+      setToast("Child profile updated");
+    } catch (requestError) {
+      setToast(messageOf(requestError));
+    } finally {
+      setSavingChild(false);
+    }
+  }
   if (error) return <div className="alert alert-error">{error}</div>;
   if (!device)
     return (
@@ -131,10 +158,61 @@ export function DeviceDetail() {
             <Smartphone size={30} />
           </div>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black">{device.childName}</h1>
-              <span className="badge badge-success text-white">Online</span>
-            </div>
+            {editingChild ? (
+              <div className="rounded-2xl border border-primary/20 bg-base-100 p-4 shadow-lg">
+                <label className="text-xs font-extrabold uppercase tracking-wider text-primary">
+                  Who is this device for?
+                </label>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    autoFocus
+                    className="input input-bordered input-sm min-w-64"
+                    maxLength={60}
+                    value={childNameDraft}
+                    onChange={(event) => setChildNameDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void updateChildProfile();
+                      if (event.key === "Escape") setEditingChild(false);
+                    }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    disabled={childNameDraft.trim().length < 2 || savingChild}
+                    onClick={updateChildProfile}
+                  >
+                    {savingChild ? (
+                      <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                      <Check size={15} />
+                    )}
+                    Save
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    disabled={savingChild}
+                    onClick={() => setEditingChild(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-base-content/45">
+                  The child’s name is only shown inside your private family dashboard.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-black">{device.childName}</h1>
+                <button
+                  className="btn btn-ghost btn-circle btn-sm"
+                  aria-label="Edit child name"
+                  title="Edit child name"
+                  onClick={beginChildEdit}
+                >
+                  <Pencil size={16} />
+                </button>
+                <span className="badge badge-success text-white">Online</span>
+              </div>
+            )}
             <p className="mt-1 text-base-content/50">
               {device.deviceName} · Android {device.androidVersion ?? "—"}
             </p>
