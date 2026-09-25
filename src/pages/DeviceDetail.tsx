@@ -21,8 +21,10 @@ import {
   ShieldAlert,
   ShieldCheck,
   Smartphone,
+  Trash2,
+  Video,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -40,10 +42,12 @@ import type {
   SharedMedia,
   SharedDocument,
   SharedRecording,
+  SharedVideo,
   Usage,
 } from "../types";
 export function DeviceDetail() {
   const { deviceId } = useParams();
+  const navigate = useNavigate();
   const [device, setDevice] = useState<Device | null>(null);
   const [usage, setUsage] = useState<Usage[]>([]);
   const [audit, setAudit] = useState<Audit[]>([]);
@@ -51,7 +55,9 @@ export function DeviceDetail() {
   const [recordings, setRecordings] = useState<SharedRecording[]>([]);
   const [media, setMedia] = useState<SharedMedia[]>([]);
   const [documents, setDocuments] = useState<SharedDocument[]>([]);
+  const [videos, setVideos] = useState<SharedVideo[]>([]);
   const [appQuery, setAppQuery] = useState("");
+  const [appFilter, setAppFilter] = useState<"all" | "user" | "system">("all");
   const [editingChild, setEditingChild] = useState(false);
   const [childNameDraft, setChildNameDraft] = useState("");
   const [savingChild, setSavingChild] = useState(false);
@@ -69,6 +75,7 @@ export function DeviceDetail() {
         setRecordings(r.data.recordings ?? []);
         setMedia(r.data.media ?? []);
         setDocuments(r.data.documents ?? []);
+        setVideos(r.data.videos ?? []);
       })
       .catch((e) => setError(messageOf(e)));
   useEffect(() => {
@@ -78,13 +85,16 @@ export function DeviceDetail() {
   const filteredApps = useMemo(() => {
     const query = appQuery.trim().toLowerCase();
     const apps = device?.installedApps ?? [];
-    if (!query) return apps;
-    return apps.filter(
-      (app) =>
+    return apps.filter((app) => {
+      if (appFilter === "user" && app.isSystem) return false;
+      if (appFilter === "system" && !app.isSystem) return false;
+      if (!query) return true;
+      return (
         app.appName.toLowerCase().includes(query) ||
-        app.packageName.toLowerCase().includes(query),
-    );
-  }, [appQuery, device?.installedApps]);
+        app.packageName.toLowerCase().includes(query)
+      );
+    });
+  }, [appQuery, appFilter, device?.installedApps]);
   const chart = useMemo(
     () =>
       [...usage].reverse().map((u) => ({
@@ -120,6 +130,50 @@ export function DeviceDetail() {
     if (!device) return;
     setChildNameDraft(device.childName);
     setEditingChild(true);
+  }
+  async function removeItem(
+    kind: "recordings" | "media" | "documents" | "videos",
+    id: string,
+    label: string,
+  ) {
+    if (
+      !window.confirm(
+        `Delete this shared ${label}? This removes it for the whole family.`,
+      )
+    )
+      return;
+    try {
+      await api.delete(`/devices/${deviceId}/${kind}/${id}`);
+      setToast(`${label[0].toUpperCase()}${label.slice(1)} deleted`);
+      void load();
+    } catch (requestError) {
+      setToast(messageOf(requestError));
+    }
+  }
+  async function clearLocations() {
+    if (!window.confirm("Clear this child's shared location history?")) return;
+    try {
+      await api.delete(`/devices/${deviceId}/locations`);
+      setToast("Location history cleared");
+      void load();
+    } catch (requestError) {
+      setToast(messageOf(requestError));
+    }
+  }
+  async function removeDevice() {
+    if (!device) return;
+    if (
+      !window.confirm(
+        `Unlink ${device.childName}'s device? This revokes access and deletes its server-side history.`,
+      )
+    )
+      return;
+    try {
+      await api.delete(`/devices/${deviceId}`);
+      navigate("/devices");
+    } catch (requestError) {
+      setToast(messageOf(requestError));
+    }
   }
   async function updateChildProfile() {
     const childName = childNameDraft.trim();

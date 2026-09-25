@@ -85,6 +85,15 @@ export type SharedDocument = {
   sharedAt: string;
   consentMode: "child_initiated";
 };
+export type SharedVideo = {
+  _id: string;
+  url: string;
+  durationSeconds?: number;
+  bytes?: number;
+  source: "recorded_video" | "selected_video";
+  sharedAt: string;
+  consentMode: "child_initiated";
+};
 export type User = {
   id?: string;
   _id?: string;
